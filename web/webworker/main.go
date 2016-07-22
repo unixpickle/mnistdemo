@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/gopherjs/gopherjs/js"
-	"github.com/unixpickle/mnist-demo"
+	"github.com/unixpickle/mnistdemo"
 	"github.com/unixpickle/serializer"
 )
 

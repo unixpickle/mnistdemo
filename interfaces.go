@@ -40,4 +40,10 @@ var Classifiers = map[string]ClassifierDesc{
 			return &Forest{}
 		},
 	},
+	"bayes": ClassifierDesc{
+		Desc: "naive bayes classification",
+		Construct: func() Classifier {
+			return &Bayes{}
+		},
+	},
 }

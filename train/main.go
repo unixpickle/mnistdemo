@@ -7,7 +7,7 @@ import (
 	"sort"
 
 	"github.com/unixpickle/mnist"
-	"github.com/unixpickle/mnist-demo"
+	"github.com/unixpickle/mnistdemo"
 	"github.com/unixpickle/serializer"
 )
 

@@ -37,7 +37,7 @@ func DeserializeForest(compressed []byte) (*Forest, error) {
 		return nil, errors.New("failed to decompress tree: " + err.Error())
 	}
 	var archived []*archivedTree
-	if err := json.Unmarshal(d, &archived); err != nil {
+	if err := unmarshalTrees(d, &archived); err != nil {
 		return nil, err
 	}
 	res := &Forest{F: make(idtrees.Forest, len(archived))}

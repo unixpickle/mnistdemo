@@ -22,7 +22,9 @@
 
     this._registerMouseEvents();
 
-    // TODO: support touchscreens here.
+    if ('ontouchstart' in document.documentElement) {
+      this._registerTouchEvents();
+    }
   }
 
   Drawing.prototype.reset = function() {
@@ -143,9 +145,29 @@
     }.bind(this));
   };
 
+  Drawing.prototype._registerTouchEvents = function() {
+    this._canvas.addEventListener('touchstart', function(e) {
+      e.preventDefault();
+      this._touchStart(this._touchPosition(e));
+    }.bind(this));
+    this._canvas.addEventListener('touchmove', function(e) {
+      e.preventDefault();
+      this._touchMove(this._touchPosition(e));
+    }.bind(this));
+    this._canvas.addEventListener('touchend', this._touchEnd.bind(this));
+    this._canvas.addEventListener('touchcancel', this._touchEnd.bind(this));
+  };
+
   Drawing.prototype._mousePosition = function(e) {
     var x = e.pageX - this._canvas.offsetLeft;
     var y = e.pageY - this._canvas.offsetTop;
+    return {x: x, y: y};
+  };
+
+  Drawing.prototype._touchPosition = function(e) {
+    var touch = e.changedTouches[0];
+    var x = touch.pageX - this._canvas.offsetLeft;
+    var y = touch.pageY - this._canvas.offsetTop;
     return {x: x, y: y};
   };
 

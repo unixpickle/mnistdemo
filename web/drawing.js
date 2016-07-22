@@ -56,14 +56,13 @@
     scaled.width = SAMPLE_SIZE;
     scaled.height = SAMPLE_SIZE;
     var ctx = scaled.getContext('2d');
-    console.log(used, center);
     ctx.drawImage(this._canvas, used.x, used.y, used.width, used.height,
       margin-offsetX, margin-offsetY, SAMPLE_BOUNDING_SIZE,
       SAMPLE_BOUNDING_SIZE);
 
     var res = new window.app.Bitmap(scaled).alphaData();
     for (var i = 0, len = res.length; i < len; ++i) {
-      res[i] = 1 - (res[i]/255);
+      res[i] /= 255;
     }
     return res;
   };

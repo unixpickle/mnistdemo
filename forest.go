@@ -26,7 +26,7 @@ func init() {
 
 // A Forest is a random forest.
 type Forest struct {
-	F idtrees.Forest
+	F []*archivedTree
 }
 
 // DeserializeForest deserializes a Forest that was
@@ -40,11 +40,7 @@ func DeserializeForest(compressed []byte) (*Forest, error) {
 	if err := unmarshalTrees(d, &archived); err != nil {
 		return nil, err
 	}
-	res := &Forest{F: make(idtrees.Forest, len(archived))}
-	for i, a := range archived {
-		res.F[i] = unarchiveTree(a)
-	}
-	return res, nil
+	return &Forest{F: archived}, nil
 }
 
 // Train trains the forest on the given training data.
@@ -53,11 +49,15 @@ func (f *Forest) Train(data, validation []*TrainingSample) {
 	samples := newForestSamples(data)
 	attrs := forestAttrs()
 	log.Println("Building forest...")
-	f.F = idtrees.BuildForest(forestTreeCount, samples, attrs, forestSampleSubset,
+	forest := idtrees.BuildForest(forestTreeCount, samples, attrs, forestSampleSubset,
 		forestAttrSubset,
 		func(s []idtrees.Sample, a []idtrees.Attr) *idtrees.Tree {
 			return idtrees.ID3(s, a, 0)
 		})
+	f.F = make([]*archivedTree, len(forest))
+	for i, t := range forest {
+		f.F[i] = archiveTree(t)
+	}
 	log.Println("Running cross validation...")
 	var correctCount int
 	for _, vSamp := range validation {
@@ -71,18 +71,25 @@ func (f *Forest) Train(data, validation []*TrainingSample) {
 
 // Classify returns the most likely class for the sample.
 func (f *Forest) Classify(s *Sample) int {
-	sample := forestSample{T: &TrainingSample{Sample: s}}
-	res := f.F.Classify(sample)
-
-	var maxClass int
-	maxLikelihood := math.Inf(-1)
-	for class, likelihood := range res {
-		if likelihood > maxLikelihood {
-			maxLikelihood = likelihood
-			maxClass = class.(int)
+	sums := map[string]float64{}
+	for _, t := range f.F {
+		res := t.Classify(s)
+		for key, val := range res {
+			sums[key] += val
 		}
 	}
-	return maxClass
+
+	maxClass := "0"
+	maxLikelihood := math.Inf(-1)
+	for class, likelihood := range sums {
+		if likelihood > maxLikelihood {
+			maxLikelihood = likelihood
+			maxClass = class
+		}
+	}
+
+	res, _ := strconv.Atoi(maxClass)
+	return res
 }
 
 // SerializerType returns Forest's unique type ID
@@ -93,11 +100,7 @@ func (f *Forest) SerializerType() string {
 
 // Serialize serializes the forest's data.
 func (f *Forest) Serialize() ([]byte, error) {
-	a := make([]*archivedTree, len(f.F))
-	for i, t := range f.F {
-		a[i] = archiveTree(t)
-	}
-	data, err := json.Marshal(a)
+	data, err := json.Marshal(f.F)
 	if err != nil {
 		return nil, err
 	}
@@ -156,21 +159,14 @@ func archiveTree(t *idtrees.Tree) *archivedTree {
 	return res
 }
 
-func unarchiveTree(t *archivedTree) *idtrees.Tree {
-	res := new(idtrees.Tree)
-	if t.Classification != nil {
-		res.Classification = map[idtrees.Class]float64{}
-		for k, v := range t.Classification {
-			class, _ := strconv.Atoi(k)
-			res.Classification[class] = v
+func (a *archivedTree) Classify(s *Sample) map[string]float64 {
+	for a.Classification == nil {
+		p := s[a.Pixel]
+		if p > a.Threshold {
+			a = a.Greater
+		} else {
+			a = a.LessEqual
 		}
-		return res
 	}
-	res.Attr = t.Pixel
-	res.NumSplit = &idtrees.NumSplit{
-		Threshold: t.Threshold,
-		LessEqual: unarchiveTree(t.LessEqual),
-		Greater:   unarchiveTree(t.Greater),
-	}
-	return res
+	return a.Classification
 }

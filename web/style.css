@@ -5,6 +5,20 @@ body {
   font-size: 16px;
 }
 
+body.loading > * {
+  display: none;
+}
+
+body.loading > #loading {
+  display: block;
+}
+
+#loading {
+  font-size: 1.4em;
+  font-weight: 300;
+  display: none;
+}
+
 #heading {
   font-size: 1.3em;
   font-weight: normal;

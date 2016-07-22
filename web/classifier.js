@@ -6,6 +6,8 @@
 
   function Classifier(classifierData) {
     this.onClassify = null;
+    this.onLoad = null;
+    this.onError = null;
 
     this._queued = null;
     this._isRunning = false;
@@ -13,6 +15,14 @@
 
     this._worker = new Worker(WEBWORKER_FILE);
     this._worker.onmessage = function(e) {
+      if ('undefined' !== typeof e.data.init) {
+        if (e.data.init === null) {
+          this.onLoad();
+        } else {
+          this.onError(e.data.init);
+        }
+        return;
+      }
       this._isRunning = false;
       if (this._queued !== null) {
         var q = this._queued;

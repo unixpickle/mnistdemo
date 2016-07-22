@@ -32,13 +32,16 @@ func messageHandler(this *js.Object, dataArg []*js.Object) interface{} {
 func initCommand(data []byte) {
 	c, err := serializer.DeserializeWithType(data)
 	if err != nil {
-		panic(err)
+		emitInitialized(err.Error())
+		return
 	}
 	var ok bool
 	Classifier, ok = c.(mnistdemo.Classifier)
 	if !ok {
-		panic("invalid underlying classifier type")
+		emitInitialized("invalid datatype")
+		return
 	}
+	emitInitialized(nil)
 }
 
 func classifyCommand(obj *js.Object) {
@@ -48,6 +51,10 @@ func classifyCommand(obj *js.Object) {
 	}
 	class := Classifier.Classify(sample)
 	emitClassification(class)
+}
+
+func emitInitialized(err interface{}) {
+	js.Global.Call("postMessage", map[string]interface{}{"init": err})
 }
 
 func emitClassification(class int) {

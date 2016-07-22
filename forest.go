@@ -2,6 +2,7 @@ package mnistdemo
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"math"
 	"math/rand"
@@ -14,7 +15,7 @@ import (
 
 const (
 	forestSerializerID = "github.com/unixpickle/mnistdemo.Forest"
-	forestTreeCount    = 100
+	forestTreeCount    = 70
 	forestSampleSubset = 4000
 	forestAttrSubset   = 75
 )
@@ -30,7 +31,11 @@ type Forest struct {
 
 // DeserializeForest deserializes a Forest that was
 // previously serialized with Forest.Serialize().
-func DeserializeForest(d []byte) (*Forest, error) {
+func DeserializeForest(compressed []byte) (*Forest, error) {
+	d, err := decompress(compressed)
+	if err != nil {
+		return nil, errors.New("failed to decompress tree: " + err.Error())
+	}
 	var archived []*archivedTree
 	if err := json.Unmarshal(d, &archived); err != nil {
 		return nil, err
@@ -92,7 +97,11 @@ func (f *Forest) Serialize() ([]byte, error) {
 	for i, t := range f.F {
 		a[i] = archiveTree(t)
 	}
-	return json.Marshal(a)
+	data, err := json.Marshal(a)
+	if err != nil {
+		return nil, err
+	}
+	return compress(data), nil
 }
 
 func forestAttrs() []idtrees.Attr {

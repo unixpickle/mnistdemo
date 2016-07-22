@@ -57,7 +57,3 @@ body {
   cursor: pointer;
   background-color: #3297b3;
 }
-
-#clear-button.hidden {
-  display: none;
-}

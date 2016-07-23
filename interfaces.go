@@ -46,4 +46,10 @@ var Classifiers = map[string]ClassifierDesc{
 			return &Bayes{}
 		},
 	},
+	"neuralnet": ClassifierDesc{
+		Desc: "a basic convolutional net",
+		Construct: func() Classifier {
+			return NewNeuralNet()
+		},
+	},
 }

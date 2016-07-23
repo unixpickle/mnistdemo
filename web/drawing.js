@@ -1,6 +1,6 @@
 (function() {
 
-  var THICKNESS = 0.07;
+  var THICKNESS = 0.1;
   var SAMPLE_SIZE = 28;
   var SAMPLE_BOUNDING_SIZE = 20;
 

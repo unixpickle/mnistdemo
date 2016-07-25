@@ -8,7 +8,9 @@
   var classifier = null;
 
   function initialize() {
-    window.app.loadClassifier('classifiers/forest', function(err, c) {
+    var fileName = initializeClassifierPicker();
+    var path = 'classifiers/' + fileName;
+    window.app.loadClassifier(path, function(err, c) {
       if (err !== null) {
         showLoadError(err);
         return;
@@ -17,6 +19,19 @@
       c.onLoad = initializeUI;
       c.onError = showLoadError;
     });
+  }
+
+  function initializeClassifierPicker() {
+    var select = document.getElementById('classifier');
+    var classifierRes = /^\?c=(.*)$/.exec(window.location.search);
+    if (classifierRes !== null) {
+      select.value = classifierRes[1];
+    }
+    select.addEventListener('change', function() {
+      var classifier = select.value;
+      window.location.search = '?c='+classifier;
+    });
+    return select.value;
   }
 
   function initializeUI() {

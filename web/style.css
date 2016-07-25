@@ -71,3 +71,11 @@ body.loading > #loading {
   cursor: pointer;
   background-color: #3297b3;
 }
+
+#classifier-picker {
+  margin-top: 15px;
+}
+
+#classifier-picker > label {
+  font-size: 17px;
+}

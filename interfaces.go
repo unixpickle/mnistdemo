@@ -52,4 +52,10 @@ var Classifiers = map[string]ClassifierDesc{
 			return NewNeuralNet()
 		},
 	},
+	"neighbors": ClassifierDesc{
+		Desc: "K-nearest neighbors",
+		Construct: func() Classifier {
+			return &Neighbors{}
+		},
+	},
 }

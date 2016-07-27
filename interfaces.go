@@ -58,4 +58,10 @@ var Classifiers = map[string]ClassifierDesc{
 			return &Neighbors{}
 		},
 	},
+	"stumps": ClassifierDesc{
+		Desc: "boosted tree stumps",
+		Construct: func() Classifier {
+			return &Stumps{}
+		},
+	},
 }

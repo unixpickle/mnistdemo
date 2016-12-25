@@ -16,7 +16,8 @@ const bayesSerializerID = "github.com/unixpickle/mnistdemo.Bayes"
 
 const (
 	bayesFeatures      = 50
-	bayesEigIterations = 300
+	bayesEigIterations = 200
+	bayesCovSamples    = 2000
 )
 
 func init() {
@@ -30,8 +31,7 @@ type Gaussian struct {
 
 type Bayes struct {
 	Classes [10][bayesFeatures]Gaussian
-	Total   [bayesFeatures]Gaussian
-	Basis   *linalg.Matrix
+	Bases   [10]*linalg.Matrix
 }
 
 func DeserializeBayes(d []byte) (*Bayes, error) {
@@ -47,17 +47,12 @@ func DeserializeBayes(d []byte) (*Bayes, error) {
 }
 
 func (b *Bayes) Train(data, validation []*TrainingSample) {
-	log.Println("Computing basis features...")
-	b.computeBasis(data)
 	log.Println("Training classifier...")
 	for i := 0; i < 10; i++ {
-		b.computeGaussians(&b.Classes[i], data, func(j int) bool {
-			return j == i
-		})
+		log.Println("Label", i)
+		b.computeBasis(data, i)
+		b.computeGaussians(data, i)
 	}
-	b.computeGaussians(&b.Total, data, func(j int) bool {
-		return true
-	})
 	log.Println("Running cross validation...")
 	var correct, total int
 	for _, s := range validation {
@@ -70,16 +65,14 @@ func (b *Bayes) Train(data, validation []*TrainingSample) {
 }
 
 func (b *Bayes) Classify(s *Sample) int {
-	features := b.Basis.MulFast(linalg.NewMatrixColumn(s[:])).Data
 	bestLogProb := math.Inf(-1)
 	bestAnswer := 0
-	for i := 0; i < 10; i++ {
+	for i, basis := range b.Bases[:] {
+		features := basis.MulFast(linalg.NewMatrixColumn(s[:])).Data
 		gaussians := &b.Classes[i]
 		var logProb float64
 		for j, g := range gaussians[:] {
-			g0 := b.Total[j]
-			logProb += math.Log(g0.Variance) - math.Log(g.Variance)
-			logProb += math.Pow(features[j]-g0.Mean, 2) / g0.Variance
+			logProb -= math.Log(g.Variance)
 			logProb -= math.Pow(features[j]-g.Mean, 2) / g.Variance
 		}
 		if logProb > bestLogProb {
@@ -102,31 +95,23 @@ func (b *Bayes) Serialize() ([]byte, error) {
 	return compress(data), nil
 }
 
-func (b *Bayes) computeBasis(data []*TrainingSample) {
-	log.Println("Computing covariance matrix...")
-	cvm := computeCovarianceMatrix(data)
-	log.Println("Computing eigenvalues...")
-	vals, vecs := largestEigenvectors(cvm)
-	log.Println("Largest variance:", linalg.Vector(vals).MaxAbs())
-
-	basis := vecs[:bayesFeatures]
-	b.Basis = linalg.NewMatrix(bayesFeatures, 28*28)
-	for i, x := range basis {
-		copy(b.Basis.Data[i*28*28:(i+1)*28*28], x)
-	}
+func (b *Bayes) computeBasis(data []*TrainingSample, label int) {
+	cvm := computeCovarianceMatrix(data, label)
+	b.Bases[label] = largestEigenvectors(cvm)
 }
 
-func (b *Bayes) computeGaussians(g *[bayesFeatures]Gaussian, set []*TrainingSample,
-	filter func(n int) bool) {
+func (b *Bayes) computeGaussians(set []*TrainingSample, label int) {
+	g := &b.Classes[label]
 	var total int
 	for _, x := range set {
-		if filter(x.Label) {
-			total++
-			features := b.Basis.MulFast(linalg.NewMatrixColumn(x.Sample[:]))
-			for i, v := range features.Data {
-				g[i].Mean += v
-				g[i].Variance += v * v
-			}
+		if x.Label != label {
+			continue
+		}
+		total++
+		features := b.Bases[label].MulFast(linalg.NewMatrixColumn(x.Sample[:]))
+		for i, v := range features.Data {
+			g[i].Mean += v
+			g[i].Variance += v * v
 		}
 	}
 	for i := range g[:] {
@@ -135,13 +120,18 @@ func (b *Bayes) computeGaussians(g *[bayesFeatures]Gaussian, set []*TrainingSamp
 	}
 }
 
-func computeCovarianceMatrix(data []*TrainingSample) *linalg.Matrix {
-	return approb.Covariances(5000, func() linalg.Vector {
-		return data[rand.Intn(len(data))].Sample[:]
+func computeCovarianceMatrix(data []*TrainingSample, label int) *linalg.Matrix {
+	return approb.Covariances(bayesCovSamples, func() linalg.Vector {
+		for {
+			item := data[rand.Intn(len(data))]
+			if item.Label == label {
+				return item.Sample[:]
+			}
+		}
 	})
 }
 
-func largestEigenvectors(mat *linalg.Matrix) (vals []float64, vecs []linalg.Vector) {
+func largestEigenvectors(mat *linalg.Matrix) *linalg.Matrix {
 	vecMat := linalg.NewMatrix(28*28, bayesFeatures)
 	for i := range vecMat.Data {
 		vecMat.Data[i] = rand.NormFloat64()
@@ -150,11 +140,5 @@ func largestEigenvectors(mat *linalg.Matrix) (vals []float64, vecs []linalg.Vect
 		product := mat.MulFast(vecMat)
 		vecMat, _ = qrdecomp.Householder(product)
 	}
-	finalProduct := mat.MulFast(vecMat)
-	for i := 0; i < bayesFeatures; i++ {
-		col := finalProduct.Col(i)
-		vals = append(vals, col.Mag())
-		vecs = append(vecs, col)
-	}
-	return
+	return vecMat.Transpose()
 }

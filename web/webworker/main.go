@@ -13,19 +13,21 @@ func main() {
 }
 
 func messageHandler(this *js.Object, dataArg []*js.Object) interface{} {
-	if len(dataArg) != 1 {
-		panic("expected one argument")
-	}
-	data := dataArg[0].Get("data")
-	command := data.Index(0).String()
+	// Can't do logic in callback.
+	go func() {
+		if len(dataArg) != 1 {
+			panic("expected one argument")
+		}
+		data := dataArg[0].Get("data")
+		command := data.Index(0).String()
 
-	switch command {
-	case "init":
-		initCommand(data.Index(1).Interface().([]byte))
-	case "classify":
-		classifyCommand(data.Index(1))
-	}
-
+		switch command {
+		case "init":
+			initCommand(data.Index(1).Interface().([]byte))
+		case "classify":
+			classifyCommand(data.Index(1))
+		}
+	}()
 	return nil
 }
 

@@ -64,4 +64,10 @@ var Classifiers = map[string]ClassifierDesc{
 			return &Stumps{}
 		},
 	},
+	"rbf": ClassifierDesc{
+		Desc: "rbf networks",
+		Construct: func() Classifier {
+			return &RBFNet{}
+		},
+	},
 }

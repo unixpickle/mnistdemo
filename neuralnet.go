@@ -76,14 +76,7 @@ func NewNeuralNet() *NeuralNet {
 func (n *NeuralNet) Train(data, validation []*TrainingSample) {
 	log.Println("Training classifier (ctrl+c to stop)...")
 
-	var inputVecs, labelVecs []linalg.Vector
-	for _, t := range data {
-		inVec, labelVec := neuralnetSample(t)
-		inputVecs = append(inputVecs, inVec)
-		labelVecs = append(labelVecs, labelVec)
-	}
-	samples := neuralnet.VectorSampleSet(inputVecs, labelVecs)
-
+	samples := neuralnetSampleSet(data)
 	gradienter := &neuralnet.BatchRGradienter{
 		Learner:  n.Net.BatchLearner(),
 		CostFunc: neuralnet.DotCost{},
@@ -142,6 +135,16 @@ func (n *NeuralNet) score(v []*TrainingSample) float64 {
 		}
 	}
 	return float64(correct) / float64(total)
+}
+
+func neuralnetSampleSet(data []*TrainingSample) sgd.SampleSet {
+	var inputVecs, labelVecs []linalg.Vector
+	for _, t := range data {
+		inVec, labelVec := neuralnetSample(t)
+		inputVecs = append(inputVecs, inVec)
+		labelVecs = append(labelVecs, labelVec)
+	}
+	return neuralnet.VectorSampleSet(inputVecs, labelVecs)
 }
 
 func neuralnetSample(t *TrainingSample) (inVec, outVec linalg.Vector) {
